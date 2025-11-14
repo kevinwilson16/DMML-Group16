@@ -21,6 +21,11 @@ AVAILABLE_MODELS = {
         'name': 'Decision Tree',
         'model_path': 'models/decision_tree_breast_cancer_model.pkl',
         'metadata_path': 'models/decision_tree_model_metadata.pkl'
+    },
+    'lr': {
+        'name': 'Logistic Regression',
+        'model_path': 'models/logistic_regression_breast_cancer_model.pkl',
+        'metadata_path': 'models/logistic_regression_metadata.pkl'
     }
 }
 
@@ -40,7 +45,7 @@ def select_model():
     display_available_models()
     
     while True:
-        choice = input("Select model (svm/dt) or 'q' to quit: ").strip().lower()
+        choice = input("Select model (svm/dt/lr) or 'q' to quit: ").strip().lower()
         
         if choice == 'q':
             return None
@@ -90,6 +95,10 @@ def load_model_and_data(model_type):
             print(f"  Max Depth: {metadata.get('max_depth', 'N/A')}")
             print(f"  Tree Depth: {metadata.get('tree_depth', 'N/A')}")
             print(f"  Number of Leaves: {metadata.get('n_leaves', 'N/A')}")
+        elif model_type == 'lr':
+            print(f"  Solver: {metadata.get('solver', 'N/A')}")
+            print(f"  Class Weight: {metadata.get('class_weight', 'N/A')}")
+            print(f"  C Parameter: {metadata.get('C', 'N/A')}")
         
         print(f"\n  Performance Metrics (from training):")
         print(f"    Accuracy:  {metadata.get('accuracy', 0)*100:.2f}%")
