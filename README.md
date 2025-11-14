@@ -49,3 +49,9 @@ All preprocessed data is saved under `data/processed/`:
 - `y_test.csv` — Testing labels (114 × 1)
 - `scaler.pkl` — Saved StandardScaler for future use
 - `feature_names.txt` — List of all 30 feature names
+
+
+
+to run -
+1) pip install -r requirements.txt
+2) jupyter notebook
