@@ -21,6 +21,11 @@ AVAILABLE_MODELS = {
         'name': 'Decision Tree',
         'model_path': 'models/decision_tree_breast_cancer_model.pkl',
         'metadata_path': 'models/decision_tree_model_metadata.pkl'
+    },
+    'lr': {
+        'name': 'Logistic Regression',
+        'model_path': 'models/logistic_regression_breast_cancer_model.pkl',
+        'metadata_path': 'models/logistic_regression_metadata.pkl'
     }
 }
 
@@ -40,7 +45,7 @@ def select_model():
     display_available_models()
     
     while True:
-        choice = input("Select model (svm/dt) or 'q' to quit: ").strip().lower()
+        choice = input("Select model (svm/dt/lr) or 'q' to quit: ").strip().lower()
         
         if choice == 'q':
             return None
@@ -90,6 +95,10 @@ def load_model_and_data(model_type):
             print(f"  Max Depth: {metadata.get('max_depth', 'N/A')}")
             print(f"  Tree Depth: {metadata.get('tree_depth', 'N/A')}")
             print(f"  Number of Leaves: {metadata.get('n_leaves', 'N/A')}")
+        elif model_type == 'lr':
+            print(f"  Solver: {metadata.get('solver', 'N/A')}")
+            print(f"  Class Weight: {metadata.get('class_weight', 'N/A')}")
+            print(f"  C Parameter: {metadata.get('C', 'N/A')}")
         
         print(f"\n  Performance Metrics (from training):")
         print(f"    Accuracy:  {metadata.get('accuracy', 0)*100:.2f}%")
@@ -141,9 +150,6 @@ def test_specific_row(model, X_test, y_test, feature_names, row_index, model_nam
         print(f"❌ Invalid row index! Please choose between 0 and {len(X_test)-1}")
         return
     
-    # Map Python index to Excel row number (account for header row)
-    excel_row = row_index + 2  # Row 2 in Excel corresponds to index 0
-    
     # Get the sample
     sample = X_test.iloc[row_index].values.reshape(1, -1)
     actual = y_test[row_index]
@@ -164,7 +170,7 @@ def test_specific_row(model, X_test, y_test, feature_names, row_index, model_nam
     
     # Display results
     print("\n" + "="*70)
-    print(f"TEST RESULT FOR ROW #{row_index} (Excel row {excel_row}) - {model_name}")
+    print(f"TEST RESULT FOR ROW #{row_index} - {model_name}")
     print("="*70)
     print(f"\n{result_color} PREDICTION STATUS: {result_symbol}")
     print(f"\n  Actual Diagnosis:    {actual_label}")
@@ -189,8 +195,7 @@ def test_multiple_rows(model, X_test, y_test, feature_names, row_indices, model_
     print("\n" + "="*70)
     print(f"BATCH TEST RESULTS FOR {len(row_indices)} SAMPLES - {model_name}")
     print("="*70)
-    print("\nNote: Excel row number = Index + 2 (because row 1 is the header).")
-    print(f"\n{'Idx':<6} {'ExcelRow':<10} {'Actual':<20} {'Predicted':<20} {'Confidence':<12} {'Status':<10}")
+    print(f"\n{'Row':<6} {'Actual':<20} {'Predicted':<20} {'Confidence':<12} {'Status':<10}")
     print("-"*70)
     
     correct_count = 0
@@ -199,7 +204,6 @@ def test_multiple_rows(model, X_test, y_test, feature_names, row_indices, model_
             print(f"{idx:<6} Invalid row index!")
             continue
         
-        excel_row = idx + 2  # Excel row mapping
         sample = X_test.iloc[idx].values.reshape(1, -1)
         actual = y_test[idx]
         prediction = model.predict(sample)[0]
@@ -214,7 +218,7 @@ def test_multiple_rows(model, X_test, y_test, feature_names, row_indices, model_
         if is_correct:
             correct_count += 1
         
-        print(f"{idx:<6} {excel_row:<10} {actual_label:<20} {predicted_label:<20} {confidence:>6.2f}%      {status}")
+        print(f"{idx:<6} {actual_label:<20} {predicted_label:<20} {confidence:>6.2f}%      {status}")
     
     batch_accuracy = (correct_count / len(row_indices)) * 100
     print("-"*70)
@@ -382,11 +386,11 @@ def interactive_mode(model, scaler, X_test, y_test, feature_names, model_name, m
         print(f"INTERACTIVE MODEL TESTING - {model_name}")
         print("="*70)
         print("\nOptions:")
-        print("  1. Test a specific row (by index; Excel row = index + 2)")
-        print("  2. Test multiple rows (comma-separated indices)")
+        print("  1. Test a specific row")
+        print("  2. Test multiple rows (comma-separated)")
         print("  3. Test random rows")
         print("  4. Input custom values for detection")
-        print("  5. Test the whole test dataset (overall accuracy)")
+        print("  5. Show overall statistics")
         print("  6. Switch model")
         print("  7. Exit")
         print("\n" + "-"*70)
