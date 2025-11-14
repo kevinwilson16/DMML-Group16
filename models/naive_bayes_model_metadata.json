@@ -1,6 +1,6 @@
 {
   "model_type": "GaussianNB",
-  "saved_at": "2025-11-14T17:28:04.451968Z",
+  "saved_at": "2025-11-14T17:34:58.924762Z",
   "metrics": {
     "accuracy": 0.9210526315789473,
     "precision": 0.9230769230769231,
@@ -41,12 +41,12 @@
     "fractal dimension_worst"
   ],
   "paths": {
-    "model": "C:\\Users\\Rhea Maria\\Desktop\\Year 2\\GitHub Year 2\\DMML\\models\\naive_bayes_breast_cancer_model.pkl",
-    "data_root": "C:\\Users\\Rhea Maria\\Desktop\\Year 2\\GitHub Year 2\\DMML\\data",
-    "processed_dir": "C:\\Users\\Rhea Maria\\Desktop\\Year 2\\GitHub Year 2\\DMML\\data\\processed"
+    "model": "C:\\Users\\gaura\\Desktop\\github\\DMML\\models\\naive_bayes_breast_cancer_model.pkl",
+    "data_root": "C:\\Users\\gaura\\Desktop\\github\\DMML\\data",
+    "processed_dir": "C:\\Users\\gaura\\Desktop\\github\\DMML\\data\\processed"
   },
   "env": {
-    "python": "3.13.9",
+    "python": "3.12.9",
     "sklearn": "1.7.2"
   }
 }
