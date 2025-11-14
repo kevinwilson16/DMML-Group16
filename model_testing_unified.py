@@ -141,6 +141,9 @@ def test_specific_row(model, X_test, y_test, feature_names, row_index, model_nam
         print(f"❌ Invalid row index! Please choose between 0 and {len(X_test)-1}")
         return
     
+    # Map Python index to Excel row number (account for header row)
+    excel_row = row_index + 2  # Row 2 in Excel corresponds to index 0
+    
     # Get the sample
     sample = X_test.iloc[row_index].values.reshape(1, -1)
     actual = y_test[row_index]
@@ -161,7 +164,7 @@ def test_specific_row(model, X_test, y_test, feature_names, row_index, model_nam
     
     # Display results
     print("\n" + "="*70)
-    print(f"TEST RESULT FOR ROW #{row_index} - {model_name}")
+    print(f"TEST RESULT FOR ROW #{row_index} (Excel row {excel_row}) - {model_name}")
     print("="*70)
     print(f"\n{result_color} PREDICTION STATUS: {result_symbol}")
     print(f"\n  Actual Diagnosis:    {actual_label}")
@@ -186,7 +189,8 @@ def test_multiple_rows(model, X_test, y_test, feature_names, row_indices, model_
     print("\n" + "="*70)
     print(f"BATCH TEST RESULTS FOR {len(row_indices)} SAMPLES - {model_name}")
     print("="*70)
-    print(f"\n{'Row':<6} {'Actual':<20} {'Predicted':<20} {'Confidence':<12} {'Status':<10}")
+    print("\nNote: Excel row number = Index + 2 (because row 1 is the header).")
+    print(f"\n{'Idx':<6} {'ExcelRow':<10} {'Actual':<20} {'Predicted':<20} {'Confidence':<12} {'Status':<10}")
     print("-"*70)
     
     correct_count = 0
@@ -195,6 +199,7 @@ def test_multiple_rows(model, X_test, y_test, feature_names, row_indices, model_
             print(f"{idx:<6} Invalid row index!")
             continue
         
+        excel_row = idx + 2  # Excel row mapping
         sample = X_test.iloc[idx].values.reshape(1, -1)
         actual = y_test[idx]
         prediction = model.predict(sample)[0]
@@ -209,7 +214,7 @@ def test_multiple_rows(model, X_test, y_test, feature_names, row_indices, model_
         if is_correct:
             correct_count += 1
         
-        print(f"{idx:<6} {actual_label:<20} {predicted_label:<20} {confidence:>6.2f}%      {status}")
+        print(f"{idx:<6} {excel_row:<10} {actual_label:<20} {predicted_label:<20} {confidence:>6.2f}%      {status}")
     
     batch_accuracy = (correct_count / len(row_indices)) * 100
     print("-"*70)
@@ -377,11 +382,11 @@ def interactive_mode(model, scaler, X_test, y_test, feature_names, model_name, m
         print(f"INTERACTIVE MODEL TESTING - {model_name}")
         print("="*70)
         print("\nOptions:")
-        print("  1. Test a specific row")
-        print("  2. Test multiple rows (comma-separated)")
+        print("  1. Test a specific row (by index; Excel row = index + 2)")
+        print("  2. Test multiple rows (comma-separated indices)")
         print("  3. Test random rows")
         print("  4. Input custom values for detection")
-        print("  5. Show overall statistics")
+        print("  5. Test the whole test dataset (overall accuracy)")
         print("  6. Switch model")
         print("  7. Exit")
         print("\n" + "-"*70)
