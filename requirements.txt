@@ -6,3 +6,7 @@ scikit-learn>=1.0.0
 joblib>=1.0.0
 jupyter>=1.0.0
 
+# Deep learning (for CBIS-DDSM CNN)
+torch>=2.0.0
+torchvision>=0.15.0
+
