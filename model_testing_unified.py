@@ -36,6 +36,11 @@ AVAILABLE_MODELS = {
         'name': 'Logistic Regression',
         'model_path': 'models/logistic_regression_breast_cancer_model.pkl',
         'metadata_path': 'models/logistic_regression_metadata.pkl'
+    },
+    'km': {
+        'name': 'K-Means Clustering',
+        'model_path': 'models/kmeans_breast_cancer_model.pkl',
+        'metadata_path': None  # K-Means is unsupervised; we typically don't have standard metadata
     }
 }
 
@@ -81,17 +86,45 @@ def load_model_and_data(model_type):
 
         # Load metadata (optional; some models may not have metadata saved)
         metadata = {}
-        try:
-            metadata = joblib.load(model_info['metadata_path'])
-        except Exception as e:
-            print(f"⚠️ Warning: Could not load metadata file ({model_info['metadata_path']}): {e}")
-            print("   Proceeding without training-time metrics.\n")
+        metadata_path = model_info.get('metadata_path')
+        if metadata_path:
+            try:
+                metadata = joblib.load(metadata_path)
+            except Exception as e:
+                print(f"⚠️ Warning: Could not load metadata file ({metadata_path}): {e}")
+                print("   Proceeding without training-time metrics.\n")
 
         scaler = joblib.load('data/processed/scaler.pkl')
         
         # Load test data
         X_test = pd.read_csv('data/processed/X_test_scaled.csv')
         y_test = pd.read_csv('data/processed/y_test.csv').values.ravel()
+
+        # For K-Means (unsupervised), compute a simple cluster→label mapping
+        # so that we can interpret clusters as benign/malignant.
+        if model_type == 'km':
+            try:
+                cluster_ids = model.predict(X_test)
+                cluster_to_label = {}
+                for c in range(model.n_clusters):
+                    mask = (cluster_ids == c)
+                    if mask.sum() == 0:
+                        # Default to benign if cluster empty in test set
+                        cluster_to_label[c] = 0
+                    else:
+                        # Majority label in this cluster (0=benign, 1=malignant)
+                        majority = int(round(y_test[mask].mean()))
+                        cluster_to_label[c] = majority
+
+                # Attach mapping to the model instance so other helpers can use it
+                setattr(model, 'cluster_to_label', cluster_to_label)
+
+                print("\nK-Means cluster → label mapping (based on test set):")
+                for c, lab in cluster_to_label.items():
+                    print(f"  Cluster {c} → Label {lab} (0=Benign, 1=Malignant)")
+                print()
+            except Exception as e:
+                print(f"⚠️ Warning: Failed to compute cluster-to-label mapping for K-Means: {e}")
         
         # Load feature names
         with open('data/processed/feature_names.txt', 'r') as f:
@@ -125,15 +158,19 @@ def load_model_and_data(model_type):
             print(f"  Class Weight: {metadata.get('class_weight', 'N/A')}")
             print(f"  C Parameter: {metadata.get('C', 'N/A')}")
         
-        print(f"\n  Performance Metrics (from training):")
-        if metadata:
-            print(f"    Accuracy:  {metadata.get('accuracy', 0)*100:.2f}%")
-            print(f"    Precision: {metadata.get('precision', 0)*100:.2f}%")
-            print(f"    Recall:    {metadata.get('recall', 0)*100:.2f}%")
-            print(f"    F1-Score:  {metadata.get('f1_score', 0)*100:.2f}%")
-            print(f"    ROC-AUC:   {metadata.get('roc_auc', 0)*100:.2f}%")
+        if model_type != 'km':
+            print(f"\n  Performance Metrics (from training):")
+            if metadata:
+                print(f"    Accuracy:  {metadata.get('accuracy', 0)*100:.2f}%")
+                print(f"    Precision: {metadata.get('precision', 0)*100:.2f}%")
+                print(f"    Recall:    {metadata.get('recall', 0)*100:.2f}%")
+                print(f"    F1-Score:  {metadata.get('f1_score', 0)*100:.2f}%")
+                print(f"    ROC-AUC:   {metadata.get('roc_auc', 0)*100:.2f}%")
+            else:
+                print("    (Not available - metadata file not found.)")
         else:
-            print("    (Not available - metadata file not found.)")
+            print("\n  Performance Metrics (from training):")
+            print("    (Not available for unsupervised K-Means. We will compute stats on the test set.)")
         print("="*70)
         
         return model, scaler, X_test, y_test, feature_names, model_info['name']
@@ -144,7 +181,13 @@ def load_model_and_data(model_type):
 
 def display_overall_stats(model, X_test, y_test, model_name):
     """Display overall model performance"""
-    y_pred = model.predict(X_test)
+    # Special handling for K-Means (unsupervised)
+    if hasattr(model, 'cluster_to_label'):
+        clusters = model.predict(X_test)
+        mapping = getattr(model, 'cluster_to_label', {})
+        y_pred = np.vectorize(mapping.get)(clusters)
+    else:
+        y_pred = model.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
     cm = confusion_matrix(y_test, y_pred)
     
@@ -187,8 +230,16 @@ def test_specific_row(model, X_test, y_test, feature_names, row_index, model_nam
     actual = y_test[row_index]
     
     # Make prediction
-    prediction = model.predict(sample)[0]
-    probability = model.predict_proba(sample)[0]
+    if hasattr(model, 'cluster_to_label'):
+        # K-Means path: map clusters to labels, and use a simple 0/1 one-hot as "probability"
+        cluster = model.predict(sample)[0]
+        mapping = getattr(model, 'cluster_to_label', {})
+        prediction = mapping.get(cluster, 0)
+        probability = np.zeros(2)
+        probability[prediction] = 1.0
+    else:
+        prediction = model.predict(sample)[0]
+        probability = model.predict_proba(sample)[0]
     
     # Format results
     actual_label = "Malignant (Cancer)" if actual == 1 else "Benign (No Cancer)"
@@ -240,8 +291,16 @@ def test_multiple_rows(model, X_test, y_test, feature_names, row_indices, model_
         excel_row = idx + 2  # Excel row mapping
         sample = X_test.iloc[idx].values.reshape(1, -1)
         actual = y_test[idx]
-        prediction = model.predict(sample)[0]
-        probability = model.predict_proba(sample)[0]
+
+        if hasattr(model, 'cluster_to_label'):
+            cluster = model.predict(sample)[0]
+            mapping = getattr(model, 'cluster_to_label', {})
+            prediction = mapping.get(cluster, 0)
+            probability = np.zeros(2)
+            probability[prediction] = 1.0
+        else:
+            prediction = model.predict(sample)[0]
+            probability = model.predict_proba(sample)[0]
         
         actual_label = "Malignant" if actual == 1 else "Benign"
         predicted_label = "Malignant" if prediction == 1 else "Benign"
@@ -305,8 +364,15 @@ def test_custom_input(model, scaler, feature_names, model_name):
         return
     
     # Make prediction
-    prediction = model.predict(features_scaled)[0]
-    probability = model.predict_proba(features_scaled)[0]
+    if hasattr(model, 'cluster_to_label'):
+        cluster = model.predict(features_scaled)[0]
+        mapping = getattr(model, 'cluster_to_label', {})
+        prediction = mapping.get(cluster, 0)
+        probability = np.zeros(2)
+        probability[prediction] = 1.0
+    else:
+        prediction = model.predict(features_scaled)[0]
+        probability = model.predict_proba(features_scaled)[0]
     
     # Display results
     predicted_label = "Malignant (Cancer)" if prediction == 1 else "Benign (No Cancer)"
@@ -386,8 +452,16 @@ def compare_models_on_row(models_data, row_index):
             
         sample = X_test.iloc[row_index].values.reshape(1, -1)
         actual = y_test[row_index]
-        prediction = model.predict(sample)[0]
-        probability = model.predict_proba(sample)[0]
+
+        if hasattr(model, 'cluster_to_label'):
+            cluster = model.predict(sample)[0]
+            mapping = getattr(model, 'cluster_to_label', {})
+            prediction = mapping.get(cluster, 0)
+            probability = np.zeros(2)
+            probability[prediction] = 1.0
+        else:
+            prediction = model.predict(sample)[0]
+            probability = model.predict_proba(sample)[0]
         
         results.append({
             'model': model_name,
