@@ -1,0 +1,27 @@
+================================================================================
+CBIS-DDSM MLP MODEL EVALUATION RESULTS
+================================================================================
+
+Model: C:\Users\gaura\Desktop\github\DMML\cbis_ddsm_dataset\models\cbis_mlp_best.pth
+Test Data: C:\Users\gaura\Desktop\CBIS-DDSM_processed\CBIS-DDSM_processed\test
+Evaluation Date: 2025-11-20 23:25:03
+
+Overall Metrics:
+--------------------------------------------------------------------------------
+Accuracy:  0.5268 (52.68%)
+Precision: 0.4714
+Recall:    0.9236
+F1-Score:  0.6242
+ROC-AUC:   0.6731
+
+Per-Class Metrics:
+--------------------------------------------------------------------------------
+Class           Precision    Recall       F1-Score     Support   
+--------------------------------------------------------------------------------
+benign          0.8045       0.2329       0.3612       760       
+malignant       0.4714       0.9236       0.6242       563       
+
+Confusion Matrix:
+--------------------------------------------------------------------------------
+[[177 583]
+ [ 43 520]]
